@@ -1,4 +1,4 @@
-## Flask REST API skeleton with dockerized Flask + flask_restx, Postgres, SQLAlchemy, Gunicorn, Nginx, Celery and Redis
+## Flask REST API skeleton with dockerized Flask + flask_restx, Postgres, SQLAlchemy, Gunicorn, Nginx, Celery, Flower and Redis
 
 
 This repository extends [flask-on-docker](https://github.com/testdrivenio/flask-on-docker) with Celery, Redis and Flask_restx to provide a skeleton for building dockerized Flask RESTful APIs.
@@ -11,13 +11,13 @@ This repository extends [flask-on-docker](https://github.com/testdrivenio/flask-
 
 The code is ready to be tested without additional configuration. However, it is strongly recommended that you modify `.env.prod` and change Postgres and Flower user and password data before moving the code into production.
 
-The functions that define the API reside in `services/web/project/__init__.py`. They call functions `services/web/project/functions.py` to do the computation. Asynchronous functions which are handled by Celery reside in `services/celery-queue/tasks.py`.
+The functions that define the API reside in `services/web/project/__init__.py`. They call functions `services/web/project/api_functions.py` to do the computation. Asynchronous functions which are handled by Celery reside in `services/celery-queue/tasks.py`.
 
 The skeleton provides few examples of synchronous and asynchronous functions which can serve as templates for implementing your own.
 In short, you need to:
 
 1.  Define the API call in `services/web/project/__init__.py` by writing a `Resource` class with the appropriate methods (e.g., get and post), decorate the class and the methods to get automated documentation and testing.
-2. Implement the actual function in `services/web/project/functions.py`. If the function is asynchronous, write also its handler in `services/celery-queue/tasks.py`. Results of asynchronous functions should be stored into the `static` folder as json files which are served when the result is requested. You can also store the results into the database.
+2. Implement the actual function in `services/web/project/api_functions.py`. If the function is asynchronous, write also a handler in `services/celery-queue/tasks.py`. Results of asynchronous functions are stored in Redis which is configured to be persistent.
 
 #### Development
 

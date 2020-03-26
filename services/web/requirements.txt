@@ -7,3 +7,4 @@ redis
 python-dotenv
 loguru
 flask-restx
+gensim

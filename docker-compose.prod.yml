@@ -35,23 +35,24 @@ services:
     build:
       context: ./services/celery-queue
       dockerfile: Dockerfile
-    depends_on:
-      - redis
-  monitor:
-    build:
-      context: ./services/celery-queue
-      dockerfile: Dockerfile
+    env_file:
+      - ./.env.dev
     ports:
      - "5555:5555"
-    entrypoint: flower
-    command:  -A tasks --port=5555 --broker=redis://redis:6379/0
+    volumes:
+      - celery-flower_data:/persistent
     depends_on:
       - redis
   redis:
     image: redis:5-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis-data:/data
 
 
 volumes:
-  postgres_data:
   static_volume:
   media_volume:
+  postgres_data:
+  redis-data:
+  celery-flower_data:
