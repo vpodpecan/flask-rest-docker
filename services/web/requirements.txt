@@ -1,0 +1,9 @@
+Flask==1.1.*
+Flask-SQLAlchemy==2.4.*
+gunicorn==20.0.*
+psycopg2-binary==2.8.*
+celery==4.4.*
+redis
+python-dotenv
+loguru
+flask-restx
