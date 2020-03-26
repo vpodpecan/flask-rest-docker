@@ -18,20 +18,17 @@ from flask_restx import Api, Resource, fields, abort, reqparse
 from celery import Celery
 import celery.states as states
 
-from . import sync_functions
+from . import api_functions
 
 
 # global variables
 CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL')
 CELERY_RESULT_BACKEND = os.environ.get('CELERY_RESULT_BACKEND')
-# if CELERY_BROKER_URL is None or CELERY_RESULT_BACKEND is None:
-#     raise Exception('Invalid celery setup')
 celery = Celery('tasks', broker=CELERY_BROKER_URL, backend=CELERY_RESULT_BACKEND)
 
 app = Flask(__name__)
 app.wsgi_app = ProxyFix(app.wsgi_app)
 app.config.from_object("project.config.Config")
-print(app.config)
 db = SQLAlchemy(app)
 api = Api(app, version='1.0',
           title='API services',
@@ -62,7 +59,7 @@ class TextTokenizer(Resource):
     @ns.expect(tokenizer_input, validate=True)
     @ns.marshal_with(tokenizer_output, code=201)
     def post(self):
-        return {'tokens': api.payload['text'].split()}
+        return {'tokens': api_functions.tokenize_text(api.payload['text'])}
 
 
 @ns.route('/tokenize_docs')
@@ -71,7 +68,7 @@ class DocsTokenizer(Resource):
     @ns.expect(doc_tokenizer_input, validate=True)
     @ns.marshal_with(doc_tokenizer_output, code=201)
     def post(self):
-        return {'tokenized_texts': [doc.split() for doc in api.payload['texts']]}
+        return {'tokenized_texts': api_functions.tokenize_documents(api.payload['texts'])}
 
 @app.route("/test/<int:x>")
 def test(x):
