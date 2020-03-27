@@ -72,8 +72,7 @@ async_translate_input = api.model('AsyncTranslateInput', {
     'target_lang': fields.String(required=True, description='target language')
 })
 async_translate_output = api.model('AsyncTranslateOutput', {
-    'task_id': fields.String(description='task ID'),
-    'check_status_url': fields.Url(description='URL for task status checking')
+    'task_id': fields.String(description='task ID')
 })
 
 
@@ -126,7 +125,7 @@ class AsyncTranslator(Resource):
     def post(self):
         task = celery.send_task('tasks.translate', args=[api.payload['text'], api.payload['target_lang']], kwargs={})
         return {'task_id': task.id}
-    
+
 
 # serving static content
 @app.route("/static/<path:filename>")
