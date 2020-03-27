@@ -1,4 +1,5 @@
 import os
+import json
 
 from flask import (
     Flask,
@@ -45,19 +46,42 @@ tokenizer_output = api.model('TokenizerOutput', {
 })
 
 doc_tokenizer_input = api.model('DocTokenizerInput', {
-    'texts': fields.List(fields.String, description='list of texts')
+    'texts': fields.List(fields.String, required=True, description='list of texts')
 })
 doc_tokenizer_output = api.model('DocTokenizerOutput', {
     'tokenized_texts': fields.List(fields.List(fields.String), description='tokens')
 })
 
+# async
+check_task_input = api.model('CheckTaskInput', {
+    'task_id': fields.String(required=True, description='task ID')
+})
+check_task_output = api.model('CheckTaskOutput', {
+    'state': fields.String(description='task state'),
+})
+
+get_task_result_input = api.model('GetTaskResultInput', {
+    'task_id': fields.String(required=True, description='task ID')
+})
+get_task_result_output = api.model('GetTaskResultOutput', {
+    'result': fields.String(description='result as JSON string')
+})
+
+async_translate_input = api.model('AsyncTranslateInput', {
+    'text': fields.String(required=True, description='text to translate'),
+    'target_lang': fields.String(required=True, description='target language')
+})
+async_translate_output = api.model('AsyncTranslateOutput', {
+    'task_id': fields.String(description='task ID'),
+    'check_status_url': fields.Url(description='URL for task status checking')
+})
 
 
 @ns.route('/tokenize_text')
 class TextTokenizer(Resource):
     @ns.doc('tokenizes input text')
     @ns.expect(tokenizer_input, validate=True)
-    @ns.marshal_with(tokenizer_output, code=201)
+    @ns.marshal_with(tokenizer_output)
     def post(self):
         return {'tokens': api_functions.tokenize_text(api.payload['text'])}
 
@@ -66,23 +90,43 @@ class TextTokenizer(Resource):
 class DocsTokenizer(Resource):
     @ns.doc('tokenizes a list of texts')
     @ns.expect(doc_tokenizer_input, validate=True)
-    @ns.marshal_with(doc_tokenizer_output, code=201)
+    @ns.marshal_with(doc_tokenizer_output)
     def post(self):
         return {'tokenized_texts': api_functions.tokenize_documents(api.payload['texts'])}
 
-@app.route("/test/<int:x>")
-def test(x):
-    task = celery.send_task('tasks.pow2', args=[x], kwargs={})
-    response = {'task_id': task.id, 'check_status_url': url_for('check_task', task_id=task.id, _external=True)}
-    return response
 
-@app.route('/check/<string:task_id>')
-def check_task(task_id):
-    res = celery.AsyncResult(task_id)
-    if res.state == states.PENDING:
+@ns.route('/check_task')
+class CheckTask(Resource):
+    @ns.doc('checks the status of the task')
+    @ns.expect(check_task_input, validate=True)
+    @ns.marshal_with(check_task_output)
+    def post(self):
+        res = celery.AsyncResult(api.payload['task_id'])
         return {'state': res.state}
-    else:
-        return {'state': res.state, 'result': res.get()}
+
+
+@ns.route('/get_task_result')
+class GetTaskResult(Resource):
+    @ns.doc('gets the result of a completed task')
+    @ns.expect(get_task_result_input, validate=True)
+    @ns.marshal_with(get_task_result_output)
+    def post(self):
+        res = celery.AsyncResult(api.payload['task_id'])
+        if res.state != states.SUCCESS:
+            abort(404, 'Cannot get result!', task_state=res.state)
+        else:
+            return {'state': res.state, 'result': res.get()}
+
+
+@ns.route('/async_translate_text')
+class AsyncTranslator(Resource):
+    @ns.doc('translates input text asynchronously')
+    @ns.expect(async_translate_input, validate=True)
+    @ns.marshal_with(async_translate_output, code=201)
+    def post(self):
+        task = celery.send_task('tasks.translate', args=[api.payload['text'], api.payload['target_lang']], kwargs={})
+        return {'task_id': task.id}
+    
 
 # serving static content
 @app.route("/static/<path:filename>")
